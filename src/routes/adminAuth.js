@@ -26,7 +26,7 @@ async function logAuth(adminId, username, action, status, req, details = null) {
 router.get(['/login', '/admin/login'], (req, res) => {
   if (req.session?.admin?.authenticated && req.session?.admin?.totpVerified) {
     if (req.session.admin.role === 'admin' || req.session.admin.role === 'superadmin') {
-      return res.redirect('/admin/licenses');
+      return res.redirect('/dashboard/server/6');
     }
     return res.redirect('/dashboard/redeem');
   }
@@ -113,6 +113,10 @@ router.post('/login', loginLimiter, async (req, res) => {
       } else {
         await logAuth(admin.id, admin.username, 'LOGIN_SUCCESS', 'SUCCESS', req, 'Connexion directe sans 2FA');
         req.session.save(() => {
+          // Si l'utilisateur est admin ou superadmin, redirection directe sur le panel de gestion serveur
+          if (admin.role === 'admin' || admin.role === 'superadmin') {
+            return res.redirect('/dashboard/server/6');
+          }
           return res.redirect('/dashboard/redeem');
         });
       }
@@ -237,6 +241,9 @@ router.post('/verify-2fa', loginLimiter, async (req, res) => {
   await logAuth(req.session.admin.id, req.session.admin.username, '2FA_SUCCESS', 'SUCCESS', req, 'Validation 2FA réussie');
 
   req.session.save(() => {
+    if (req.session.admin.role === 'admin' || req.session.admin.role === 'superadmin') {
+      return res.redirect('/dashboard/server/6');
+    }
     return res.redirect('/dashboard/redeem');
   });
 });
