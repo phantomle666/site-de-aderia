@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark" style="color-scheme: dark;">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Authentification à Deux Facteurs (2FA)</title>
+  <link rel="icon" href="/images/server_logo.png">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body {
+      background-color: #08090c;
+      color: #f3f4f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1.5rem;
+      position: relative;
+    }
+    .ambient-glow {
+      position: absolute;
+      top: -100px;
+      left: 30%;
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%);
+      filter: blur(80px);
+      pointer-events: none;
+    }
+    .card {
+      background: #0f1115;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 400px;
+      padding: 2.25rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+    .shield-icon {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto 1.25rem;
+      border-radius: 14px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #10b981;
+    }
+    h1 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.35rem; }
+    p.subtitle { font-size: 0.85rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 1.5rem; line-height: 1.4; }
+    .alert-error {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      padding: 0.75rem;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+    .token-input {
+      width: 100%;
+      letter-spacing: 0.5rem;
+      text-align: center;
+      font-size: 1.6rem;
+      font-family: monospace;
+      font-weight: 700;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 0.75rem;
+      color: #10b981;
+      margin-bottom: 1.25rem;
+      outline: none;
+    }
+    .token-input:focus {
+      border-color: #10b981;
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    }
+    .btn-verify {
+      width: 100%;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      padding: 0.8rem;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    }
+    .btn-verify:hover {
+      background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    }
+    .cancel-link {
+      display: inline-block;
+      margin-top: 1.25rem;
+      font-size: 0.825rem;
+      color: rgba(255, 255, 255, 0.4);
+      text-decoration: none;
+    }
+    .cancel-link:hover { color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="ambient-glow"></div>
+
+  <div class="card">
+    <div class="shield-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+    </div>
+
+    <h1>Code Authenticator</h1>
+    <p class="subtitle">Ouvrez votre application d'authentification (Google Authenticator ou Authy) et saisissez le code à 6 chiffres.</p>
+
+    <% if (error) { %>
+      <div class="alert-error"><%= error %></div>
+    <% } %>
+
+    <form method="POST" action="/verify-2fa" autocomplete="off">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <input 
+        type="text" 
+        name="token" 
+        class="token-input"
+        pattern="\d{6}" 
+        maxlength="6" 
+        placeholder="000000" 
+        required 
+        autofocus 
+        inputmode="numeric"
+      >
+
+      <button type="submit" class="btn-verify">Valider & Accéder au Panel</button>
+    </form>
+
+    <a href="/logout" class="cancel-link">← Annuler et se déconnecter</a>
+  </div>
+</body>
+</html>

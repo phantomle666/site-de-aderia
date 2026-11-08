@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark" style="color-scheme: dark;">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administration FiveM - Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0c0d0e; color: #f3f4f6; min-height: 100vh; display: flex; flex-direction: column; }
+    header { background: #141518; border-bottom: 1px solid #23252a; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-weight: 700; font-size: 1.1rem; color: #fff; display: flex; align-items: center; gap: 0.5rem; }
+    .logo span { color: #6366f1; }
+    nav { display: flex; gap: 1.5rem; align-items: center; }
+    nav a { color: #9ca3af; text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+    nav a:hover, nav a.active { color: #fff; }
+    .user-pill { display: flex; align-items: center; gap: 0.75rem; background: #1d1e22; padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.85rem; border: 1px solid #2d2f35; }
+    .user-pill .badge { background: #6366f1; color: white; padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+    .logout-btn { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.85rem; font-weight: 500; }
+    .logout-btn:hover { text-decoration: underline; }
+    main { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; width: 100%; flex: 1; }
+    h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 1.5rem; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+    .stat-card { background: #18191c; border: 1px solid #27282d; border-radius: 12px; padding: 1.5rem; }
+    .stat-card .label { font-size: 0.85rem; color: #9ca3af; font-weight: 500; }
+    .stat-card .value { font-size: 2rem; font-weight: 700; margin-top: 0.5rem; }
+    .stat-card.green .value { color: #10b981; }
+    .stat-card.red .value { color: #ef4444; }
+    .stat-card.orange .value { color: #f59e0b; }
+    .card { background: #18191c; border: 1px solid #27282d; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; }
+    .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th { text-align: left; padding: 0.75rem 1rem; color: #9ca3af; font-weight: 600; border-bottom: 1px solid #27282d; }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid #202126; color: #d1d5db; }
+    .alert-banner { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      Panel Admin <span>FiveM</span>
+    </div>
+    <nav>
+      <a href="/admin/dashboard" class="active">Vue d'ensemble</a>
+      <a href="/admin/licenses">Licences</a>
+      <a href="/admin/audit-logs">Journal d'audit</a>
+      <div class="user-pill">
+        <span><%= admin.username %></span>
+        <span class="badge"><%= admin.role %></span>
+        <form method="POST" action="/admin/logout" style="display:inline;">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button type="submit" class="logout-btn">Déconnexion</button>
+        </form>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Tableau de bord</h1>
+
+    <% if (alerts && alerts.length > 0) { %>
+      <div class="alert-banner">
+        <strong>⚠️ Alerte Détection Multi-IP :</strong>
+        <%= alerts.length %> licence(s) sont actuellement exécutées sur un nombre d'adresses IP supérieur à leur limite autorisée !
+      </div>
+    <% } %>
+
+    <div class="stats-grid">
+      <div class="stat-card green">
+        <div class="label">Licences Actives</div>
+        <div class="value"><%= stats.active_count || 0 %></div>
+      </div>
+      <div class="stat-card red">
+        <div class="label">Licences Révoquées</div>
+        <div class="value"><%= stats.revoked_count || 0 %></div>
+      </div>
+      <div class="stat-card orange">
+        <div class="label">Licences Expirées</div>
+        <div class="value"><%= stats.expired_count || 0 %></div>
+      </div>
+    </div>
+
+    <% if (alerts && alerts.length > 0) { %>
+      <div class="card">
+        <div class="card-title">🚨 Alertes Utilisation Anormale (Multi-Serveurs)</div>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Clé Masquée</th>
+              <th>Produit</th>
+              <th>IPs Actives</th>
+              <th>Max Autorisé</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% alerts.forEach(alert => { %>
+              <tr>
+                <td>#<%= alert.id %></td>
+                <td><code><%= alert.masked_key %></code></td>
+                <td><%= alert.product %></td>
+                <td style="color: #ef4444; font-weight: 700;"><%= alert.actual_ips %> IP(s)</td>
+                <td><%= alert.max_servers %></td>
+                <td>
+                  <form method="POST" action="/admin/licenses/<%= alert.id %>/reset-ips" style="display:inline;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Reset IPs</button>
+                  </form>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <div class="card">
+      <div class="card-title">Dernières Activations & Pings Serveurs FiveM</div>
+      <% if (!recentActivations || recentActivations.length === 0) { %>
+        <p style="color: #6b7280; font-size: 0.9rem;">Aucun serveur FiveM connecté pour l'instant.</p>
+      <% } else { %>
+        <table>
+          <thead>
+            <tr>
+              <th>Adresse IP</th>
+              <th>Nom du Serveur</th>
+              <th>Licence Liée</th>
+              <th>Produit</th>
+              <th>Dernier Contact</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% recentActivations.forEach(act => { %>
+              <tr>
+                <td><code><%= act.ip_address %></code></td>
+                <td><%= act.server_name || 'Inconnu' %></td>
+                <td><code><%= act.masked_key %></code></td>
+                <td><%= act.product %></td>
+                <td><%= new Date(act.last_seen_at).toLocaleString('fr-FR') %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+  </main>
+</body>
+</html>
