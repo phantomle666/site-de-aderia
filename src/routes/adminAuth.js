@@ -23,9 +23,12 @@ async function logAuth(adminId, username, action, status, req, details = null) {
 // ==========================================
 // 1. PAGE DE CONNEXION (GET /login)
 // ==========================================
-router.get('/login', (req, res) => {
+router.get(['/login', '/admin/login'], (req, res) => {
   if (req.session?.admin?.authenticated && req.session?.admin?.totpVerified) {
-    return res.redirect('/dashboard/server/6');
+    if (req.session.admin.role === 'admin' || req.session.admin.role === 'superadmin') {
+      return res.redirect('/admin/licenses');
+    }
+    return res.redirect('/dashboard/redeem');
   }
   const error = req.query.error || null;
   const success = req.query.registered ? 'Votre compte a été créé avec succès ! Vous pouvez vous connecter.' : null;
