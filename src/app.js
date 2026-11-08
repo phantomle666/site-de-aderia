@@ -135,10 +135,14 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Une erreur interne est survenue.' });
 });
 
+const autoInitDb = require('./config/initDb');
+
 const PORT = process.env.PORT || 3000;
 if (require.main === module) {
-  app.listen(PORT, () => {
+  app.listen(PORT, async () => {
     console.log(`[SECURE_PANEL] Serveur démarré sur http://localhost:${PORT}`);
+    // Auto-initialisation des tables BDD au démarrage
+    await autoInitDb();
   });
 }
 
