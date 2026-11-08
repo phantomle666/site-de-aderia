@@ -110,7 +110,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       } else {
         await logAuth(admin.id, admin.username, 'LOGIN_SUCCESS', 'SUCCESS', req, 'Connexion directe sans 2FA');
         req.session.save(() => {
-          return res.redirect('/dashboard/server/6');
+          return res.redirect('/dashboard/redeem');
         });
       }
     });
@@ -126,7 +126,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 // ==========================================
 router.get('/register', (req, res) => {
   if (req.session?.admin?.authenticated && req.session?.admin?.totpVerified) {
-    return res.redirect('/dashboard/server/6');
+    return res.redirect('/dashboard/redeem');
   }
   res.render('register', { error: null });
 });
@@ -207,7 +207,7 @@ router.get('/verify-2fa', (req, res) => {
     return res.redirect('/login');
   }
   if (req.session.admin.totpVerified) {
-    return res.redirect('/dashboard/server/6');
+    return res.redirect('/dashboard/redeem');
   }
   res.render('totp', { error: null });
 });
@@ -234,7 +234,7 @@ router.post('/verify-2fa', loginLimiter, async (req, res) => {
   await logAuth(req.session.admin.id, req.session.admin.username, '2FA_SUCCESS', 'SUCCESS', req, 'Validation 2FA réussie');
 
   req.session.save(() => {
-    return res.redirect('/dashboard/server/6');
+    return res.redirect('/dashboard/redeem');
   });
 });
 

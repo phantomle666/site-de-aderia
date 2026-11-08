@@ -86,27 +86,35 @@ app.use(csrfProtection);
 // Routes d'authentification publiques (Login, Register, Google, Verify-2FA, Logout, Settings API)
 app.use('/', adminAuthRoutes);
 
+// Redirection de la session client
+function requireClientAuth(req, res, next) {
+  if (req.session?.admin?.authenticated && req.session?.admin?.totpVerified) {
+    return next();
+  }
+  return res.redirect('/login');
+}
+
 // Pages client (FiveM player dashboard & redeem)
-app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, '../pages/dashboard.html')));
-app.get('/dashboard/server/:id', (req, res) => res.sendFile(path.join(__dirname, '../pages/server-management.html')));
-app.get('/server-manage', (req, res) => res.sendFile(path.join(__dirname, '../pages/server-management.html')));
-app.get('/dashboard/redeem', (req, res) => res.sendFile(path.join(__dirname, '../pages/redeem.html')));
-app.get('/pages/redeem.html', (req, res) => res.sendFile(path.join(__dirname, '../pages/redeem.html')));
-app.get('/pages/dashboard.html', (req, res) => res.sendFile(path.join(__dirname, '../pages/dashboard.html')));
-app.get('/redeem', (req, res) => res.sendFile(path.join(__dirname, '../pages/redeem.html')));
+app.get('/dashboard', requireClientAuth, (req, res) => res.sendFile(path.join(__dirname, '../pages/redeem.html')));
+app.get('/dashboard/server/:id', requireClientAuth, (req, res) => res.sendFile(path.join(__dirname, '../pages/server-management.html')));
+app.get('/server-manage', requireClientAuth, (req, res) => res.sendFile(path.join(__dirname, '../pages/server-management.html')));
+app.get('/dashboard/redeem', requireClientAuth, (req, res) => res.sendFile(path.join(__dirname, '../pages/redeem.html')));
+app.get('/pages/redeem.html', requireClientAuth, (req, res) => res.sendFile(path.join(__dirname, '../pages/redeem.html')));
+app.get('/pages/dashboard.html', requireClientAuth, (req, res) => res.sendFile(path.join(__dirname, '../pages/redeem.html')));
+app.get('/redeem', requireClientAuth, (req, res) => res.sendFile(path.join(__dirname, '../pages/redeem.html')));
 
 // Session client simulée pour débloquer l'interface redeem
 app.get('/api/auth/get-session', (req, res) => {
   res.json({
     user: {
-      id: "1",
+      id: String(req.session?.admin?.id || "1"),
       name: req.session?.admin?.username || "pentagone",
       email: req.session?.admin?.email || "pentagone@discord.gg",
       image: "/images/5c34c4d1e2e1fdb9c0f7fd37ac081df2.png"
     },
     session: {
       id: "session-active-local",
-      userId: "1"
+      userId: String(req.session?.admin?.id || "1")
     }
   });
 });
