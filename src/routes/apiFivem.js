@@ -71,4 +71,56 @@ router.post('/verify', apiLimiter, async (req, res) => {
   }
 });
 
+// POST /api/licenses/redeem-direct (Activation directe et fiable pour l'interface client)
+router.post('/redeem-direct', async (req, res) => {
+  const { licenseKey, serverOption, existingServerId } = req.body;
+
+  if (!licenseKey || typeof licenseKey !== 'string') {
+    return res.status(400).json({ success: false, error: 'Veuillez renseigner une clé de licence valide.' });
+  }
+
+  const cleanKey = licenseKey.trim();
+  const keyHash = hashLicenseKey(cleanKey);
+
+  try {
+    const [licenses] = await pool.query(
+      'SELECT id, product, type, status, expires_at, max_servers FROM licenses WHERE license_hash = ? OR license_key = ?',
+      [keyHash, cleanKey]
+    );
+
+    if (licenses.length === 0) {
+      return res.status(404).json({ success: false, error: 'Clé de licence invalide ou introuvable.' });
+    }
+
+    const lic = licenses[0];
+
+    if (lic.status === 'revoked') {
+      return res.status(403).json({ success: false, error: 'Cette clé de licence a été révoquée.' });
+    }
+
+    if (lic.expires_at && new Date(lic.expires_at) <= new Date()) {
+      return res.status(403).json({ success: false, error: 'Cette clé de licence a expiré.' });
+    }
+
+    const clientIp = (req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1').replace(/^::ffff:/, '');
+
+    // Rattacher le serveur et son adresse IP
+    const [ins] = await pool.query(
+      'INSERT INTO license_ips (license_id, ip_address, server_name) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE last_seen_at = NOW()',
+      [lic.id, clientIp, 'Serveur ' + lic.product]
+    );
+
+    const serverId = ins.insertId || lic.id;
+
+    return res.json({
+      success: true,
+      message: `Licence ${lic.product} activée avec succès !`,
+      serverId: String(serverId)
+    });
+  } catch (err) {
+    console.error('[REDEEM_DIRECT_ERROR]', err);
+    return res.status(500).json({ success: false, error: 'Erreur lors de l’activation de la clé.' });
+  }
+});
+
 module.exports = router;
