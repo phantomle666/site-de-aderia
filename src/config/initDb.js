@@ -29,22 +29,30 @@ async function autoInitDb() {
       await pool.query("ALTER TABLE admins MODIFY COLUMN role ENUM('client','admin','superadmin') DEFAULT 'client'");
     } catch (_) {}
 
-    // Initialisation automatique du superadmin par défaut (ou réinitialisation s'il n'existe pas)
+    // Initialisation ou synchronisation forcée du superadmin par défaut "pentagone"
     try {
-      const [adminRows] = await pool.query("SELECT id FROM admins WHERE username = 'pentagone' OR role IN ('admin', 'superadmin')");
-      if (adminRows.length === 0) {
-        const argon2 = require('argon2');
-        const defaultAdminHash = await argon2.hash('admin12345678', {
-          type: argon2.argon2id,
-          memoryCost: 65536,
-          timeCost: 3,
-          parallelism: 4
-        });
+      const argon2 = require('argon2');
+      const defaultAdminHash = await argon2.hash('admin12345678', {
+        type: argon2.argon2id,
+        memoryCost: 65536,
+        timeCost: 3,
+        parallelism: 4
+      });
+
+      const [existingPentagone] = await pool.query("SELECT id FROM admins WHERE username = 'pentagone'");
+      if (existingPentagone.length === 0) {
         await pool.query(
-          "INSERT INTO admins (username, email, password_hash, role, is_totp_enabled, auth_provider) VALUES (?, ?, ?, 'superadmin', 0, 'local')",
+          "INSERT INTO admins (username, email, password_hash, role, is_totp_enabled, auth_provider, failed_attempts, locked_until) VALUES (?, ?, ?, 'superadmin', 0, 'local', 0, NULL)",
           ['pentagone', 'pentagone@aderia.fr', defaultAdminHash]
         );
-        console.log('[AUTO_INIT_DB] Compte superadmin par défaut "pentagone" initialisé.');
+        console.log('[AUTO_INIT_DB] Compte superadmin "pentagone" créé.');
+      } else {
+        // Réinitialise le mot de passe sur admin12345678, déverrouille le compte et retire le blocage 2FA pour repartir sur une base saine
+        await pool.query(
+          "UPDATE admins SET password_hash = ?, role = 'superadmin', failed_attempts = 0, locked_until = NULL, is_totp_enabled = 0 WHERE username = 'pentagone'",
+          [defaultAdminHash]
+        );
+        console.log('[AUTO_INIT_DB] Compte superadmin "pentagone" déverrouillé et synchronisé.');
       }
     } catch (eAdmin) {
       console.warn('[AUTO_INIT_DB] Note admin init:', eAdmin.message);
