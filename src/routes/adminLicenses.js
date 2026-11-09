@@ -99,9 +99,9 @@ router.post('/licenses/create', requireAdmin, async (req, res) => {
     const encrypted = encryptText(plainKey);
 
     const [result] = await pool.query(
-      `INSERT INTO licenses (license_hash, encrypted_key, masked_key, product, type, status, expires_at, max_servers, note, source)
-       VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, 'manual')`,
-      [hash, encrypted, masked, product.trim(), type, expiresAt, serversLimit, note ? note.trim() : null]
+      `INSERT INTO licenses (license_hash, encrypted_key, masked_key, license_key, product, type, status, expires_at, max_servers, note, source)
+       VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, 'manual')`,
+      [hash, encrypted, masked, plainKey, product.trim(), type, expiresAt, serversLimit, note ? note.trim() : null]
     );
 
     await logAudit(req, {

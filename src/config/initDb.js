@@ -124,6 +124,7 @@ async function autoInitDb() {
       "ALTER TABLE licenses ADD COLUMN type ENUM('standard', 'lifetime', 'gift') DEFAULT 'standard'",
       "ALTER TABLE licenses ADD COLUMN note VARCHAR(255) NULL",
       "ALTER TABLE licenses ADD COLUMN source VARCHAR(32) DEFAULT 'manual'",
+      "ALTER TABLE licenses MODIFY COLUMN license_key VARCHAR(128) NULL",
       "ALTER TABLE licenses MODIFY COLUMN customer_email VARCHAR(191) NULL",
       "ALTER TABLE licenses MODIFY COLUMN status ENUM('active','suspended','revoked','expired') DEFAULT 'active'"
     ];
