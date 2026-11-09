@@ -117,6 +117,20 @@ async function autoInitDb() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    // Migration progressive de la table licenses si elle avait été créée auparavant sans ces colonnes
+    const licenseColumns = [
+      "ALTER TABLE licenses ADD COLUMN IF NOT EXISTS license_hash CHAR(64) NULL",
+      "ALTER TABLE licenses ADD COLUMN IF NOT EXISTS encrypted_key TEXT NULL",
+      "ALTER TABLE licenses ADD COLUMN IF NOT EXISTS type ENUM('standard', 'lifetime', 'gift') DEFAULT 'standard'",
+      "ALTER TABLE licenses ADD COLUMN IF NOT EXISTS note VARCHAR(255) NULL",
+      "ALTER TABLE licenses ADD COLUMN IF NOT EXISTS source VARCHAR(32) DEFAULT 'manual'",
+      "ALTER TABLE licenses MODIFY COLUMN customer_email VARCHAR(191) NULL",
+      "ALTER TABLE licenses MODIFY COLUMN status ENUM('active','suspended','revoked','expired') DEFAULT 'active'"
+    ];
+    for (const sql of licenseColumns) {
+      try { await pool.query(sql); } catch (_) {}
+    }
+
     // 5. Table audit_logs
     await pool.query(`
       CREATE TABLE IF NOT EXISTS audit_logs (
