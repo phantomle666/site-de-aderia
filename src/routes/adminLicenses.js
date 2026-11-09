@@ -120,7 +120,7 @@ router.post('/licenses/create', requireAdmin, async (req, res) => {
     res.redirect('/admin/licenses');
   } catch (err) {
     console.error('[LICENSE_CREATE_ERROR]', err);
-    res.status(500).json({ error: 'Erreur lors de la création de la licence' });
+    res.status(500).json({ error: 'Erreur lors de la création de la licence', details: err.message });
   }
 });
 

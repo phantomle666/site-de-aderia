@@ -117,18 +117,22 @@ async function autoInitDb() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // Migration progressive de la table licenses si elle avait été créée auparavant sans ces colonnes
+    // Migration progressive de la table licenses avec ALTER TABLE compatible MySQL standard
     const licenseColumns = [
-      "ALTER TABLE licenses ADD COLUMN IF NOT EXISTS license_hash CHAR(64) NULL",
-      "ALTER TABLE licenses ADD COLUMN IF NOT EXISTS encrypted_key TEXT NULL",
-      "ALTER TABLE licenses ADD COLUMN IF NOT EXISTS type ENUM('standard', 'lifetime', 'gift') DEFAULT 'standard'",
-      "ALTER TABLE licenses ADD COLUMN IF NOT EXISTS note VARCHAR(255) NULL",
-      "ALTER TABLE licenses ADD COLUMN IF NOT EXISTS source VARCHAR(32) DEFAULT 'manual'",
+      "ALTER TABLE licenses ADD COLUMN license_hash CHAR(64) NULL",
+      "ALTER TABLE licenses ADD COLUMN encrypted_key TEXT NULL",
+      "ALTER TABLE licenses ADD COLUMN type ENUM('standard', 'lifetime', 'gift') DEFAULT 'standard'",
+      "ALTER TABLE licenses ADD COLUMN note VARCHAR(255) NULL",
+      "ALTER TABLE licenses ADD COLUMN source VARCHAR(32) DEFAULT 'manual'",
       "ALTER TABLE licenses MODIFY COLUMN customer_email VARCHAR(191) NULL",
       "ALTER TABLE licenses MODIFY COLUMN status ENUM('active','suspended','revoked','expired') DEFAULT 'active'"
     ];
     for (const sql of licenseColumns) {
-      try { await pool.query(sql); } catch (_) {}
+      try {
+        await pool.query(sql);
+      } catch (err) {
+        // Ignore si la colonne existe déjà (code ER_DUP_FIELDNAME)
+      }
     }
 
     // 5. Table audit_logs
