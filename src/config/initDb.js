@@ -16,13 +16,39 @@ async function autoInitDb() {
         google_id VARCHAR(100) NULL UNIQUE,
         auth_provider ENUM('local', 'google') DEFAULT 'local',
         avatar_url VARCHAR(255) NULL,
-        role ENUM('admin','superadmin') DEFAULT 'admin',
+        role ENUM('client','admin','superadmin') DEFAULT 'client',
         failed_attempts INT UNSIGNED DEFAULT 0,
         locked_until DATETIME NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    // Migration du rôle pour autoriser 'client' si la table existait déjà
+    try {
+      await pool.query("ALTER TABLE admins MODIFY COLUMN role ENUM('client','admin','superadmin') DEFAULT 'client'");
+    } catch (_) {}
+
+    // Initialisation automatique du superadmin par défaut (ou réinitialisation s'il n'existe pas)
+    try {
+      const [adminRows] = await pool.query("SELECT id FROM admins WHERE username = 'pentagone' OR role IN ('admin', 'superadmin')");
+      if (adminRows.length === 0) {
+        const argon2 = require('argon2');
+        const defaultAdminHash = await argon2.hash('admin12345678', {
+          type: argon2.argon2id,
+          memoryCost: 65536,
+          timeCost: 3,
+          parallelism: 4
+        });
+        await pool.query(
+          "INSERT INTO admins (username, email, password_hash, role, is_totp_enabled, auth_provider) VALUES (?, ?, ?, 'superadmin', 0, 'local')",
+          ['pentagone', 'pentagone@aderia.fr', defaultAdminHash]
+        );
+        console.log('[AUTO_INIT_DB] Compte superadmin par défaut "pentagone" initialisé.');
+      }
+    } catch (eAdmin) {
+      console.warn('[AUTO_INIT_DB] Note admin init:', eAdmin.message);
+    }
 
     // 2. Table auth_logs
     await pool.query(`
@@ -66,15 +92,37 @@ async function autoInitDb() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS licenses (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        license_key VARCHAR(128) NOT NULL UNIQUE,
+        license_hash CHAR(64) NULL UNIQUE,
+        encrypted_key TEXT NULL,
+        license_key VARCHAR(128) NULL UNIQUE,
         masked_key VARCHAR(32) NOT NULL,
         product VARCHAR(64) NOT NULL,
-        customer_email VARCHAR(191) NOT NULL,
+        type ENUM('standard', 'lifetime', 'gift') DEFAULT 'standard',
+        customer_email VARCHAR(191) NULL,
         customer_discord VARCHAR(64) NULL,
         max_servers INT UNSIGNED DEFAULT 1,
-        status ENUM('active','suspended','revoked') DEFAULT 'active',
+        status ENUM('active','suspended','revoked','expired') DEFAULT 'active',
+        note VARCHAR(255) NULL,
+        source VARCHAR(32) DEFAULT 'manual',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         expires_at DATETIME NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // 5. Table audit_logs
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        admin_id INT UNSIGNED NULL,
+        admin_username VARCHAR(50) NOT NULL,
+        action VARCHAR(64) NOT NULL,
+        target_type VARCHAR(32) NOT NULL,
+        target_id VARCHAR(64) NULL,
+        ip_address VARCHAR(45) NOT NULL,
+        before_state JSON NULL,
+        after_state JSON NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_audit_created (created_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 

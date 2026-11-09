@@ -21,12 +21,12 @@ async function logAuth(adminId, username, action, status, req, details = null) {
 }
 
 // ==========================================
-// 1. PAGE DE CONNEXION (GET /login)
+// 1. PAGE DE CONNEXION (GET /login & /admin/login)
 // ==========================================
 router.get(['/login', '/admin/login'], (req, res) => {
   if (req.session?.admin?.authenticated && req.session?.admin?.totpVerified) {
     if (req.session.admin.role === 'admin' || req.session.admin.role === 'superadmin') {
-      return res.redirect('/dashboard/server/6');
+      return res.redirect('/admin/dashboard');
     }
     return res.redirect('/dashboard/redeem');
   }
@@ -36,9 +36,9 @@ router.get(['/login', '/admin/login'], (req, res) => {
 });
 
 // ==========================================
-// 2. SOUMISSION CONNEXION (POST /login)
+// 2. SOUMISSION CONNEXION (POST /login & /admin/login)
 // ==========================================
-router.post('/login', loginLimiter, async (req, res) => {
+router.post(['/login', '/admin/login'], loginLimiter, async (req, res) => {
   const { username, password } = req.body;
   const genericError = 'Identifiants invalides ou compte temporairement verrouillé.';
 
@@ -113,9 +113,9 @@ router.post('/login', loginLimiter, async (req, res) => {
       } else {
         await logAuth(admin.id, admin.username, 'LOGIN_SUCCESS', 'SUCCESS', req, 'Connexion directe sans 2FA');
         req.session.save(() => {
-          // Si l'utilisateur est admin ou superadmin, redirection directe sur le panel de gestion serveur
+          // Si l'utilisateur est admin ou superadmin, redirection directe sur le dashboard admin
           if (admin.role === 'admin' || admin.role === 'superadmin') {
-            return res.redirect('/dashboard/server/6');
+            return res.redirect('/admin/dashboard');
           }
           return res.redirect('/dashboard/redeem');
         });
@@ -193,7 +193,7 @@ router.post('/register', loginLimiter, async (req, res) => {
 
     const [result] = await pool.query(
       'INSERT INTO admins (username, email, password_hash, role, is_totp_enabled, auth_provider) VALUES (?, ?, ?, ?, 0, "local")',
-      [cleanUser, cleanEmail, passwordHash, 'admin']
+      [cleanUser, cleanEmail, passwordHash, 'client']
     );
 
     const newAdminId = result.insertId;
@@ -242,7 +242,7 @@ router.post('/verify-2fa', loginLimiter, async (req, res) => {
 
   req.session.save(() => {
     if (req.session.admin.role === 'admin' || req.session.admin.role === 'superadmin') {
-      return res.redirect('/dashboard/server/6');
+      return res.redirect('/admin/dashboard');
     }
     return res.redirect('/dashboard/redeem');
   });
