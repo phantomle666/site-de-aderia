@@ -697,6 +697,35 @@
       }
     }
 
+    
+    window.submitRedeemFormWithKey = async function(key) {
+      if (!key) {
+        showToast('Veuillez entrer une clé de licence valide.', 'error');
+        return;
+      }
+
+      showToast('Activation de la clé en cours...', 'info');
+
+      try {
+        const res = await fetch('/api/licenses/redeem-direct', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ licenseKey: key })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          showToast(data.message || 'Clé activée avec succès !', 'success');
+          window.showActivationModal(data.serverId || '6', data.message);
+        } else {
+          showToast(data.error || 'Erreur lors de l’activation de la clé.', 'error');
+        }
+      } catch (err) {
+        showToast('Erreur technique lors de l’activation.', 'error');
+      }
+    };
+
     window.showActivationModal = function(serverId, message) {
       activeServerId = serverId || '6';
       const modal = document.getElementById('modal-activation-success');
