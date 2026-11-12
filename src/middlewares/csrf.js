@@ -16,8 +16,8 @@ function csrfProtection(req, res, next) {
     return next();
   }
 
-  // La première soumission de login établit la session
-  if (req.path === '/login') {
+  // Exemptions : première soumission login, routes API publiques FiveM et activation directe
+  if (req.path === '/login' || req.path.startsWith('/api/licenses') || req.path.startsWith('/trpc')) {
     return next();
   }
 
